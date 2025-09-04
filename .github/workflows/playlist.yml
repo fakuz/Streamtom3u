@@ -29,16 +29,15 @@ jobs:
           pip install yt-dlp
 
       # 4. Crear cookies.txt SOLO si el secreto existe (la verificación va dentro del script)
-      - name: Crear cookies.txt desde GitHub Secrets (si existe)
+      - name: Crear cookies.txt desde GitHub Secrets
         env:
           COOKIES_FILE: ${{ secrets.COOKIES_FILE }}
         run: |
           if [ -n "$COOKIES_FILE" ]; then
-            # Usar printf para preservar saltos de línea
-            printf '%s' "$COOKIES_FILE" > cookies.txt
-            echo "[INFO] cookies.txt creado"
+            printf '%s\n' "$COOKIES_FILE" > cookies.txt
+            echo "[INFO] cookies.txt creado con $(wc -l < cookies.txt) líneas"
           else
-            echo "[INFO] Secret COOKIES_FILE no definido; continuando sin cookies."
+            echo "[WARNING] No se definió COOKIES_FILE. Continuando sin cookies."
           fi
           
       # 5. Dar permisos al script
