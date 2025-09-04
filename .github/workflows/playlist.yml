@@ -4,25 +4,44 @@ on:
   workflow_dispatch:   # Permite ejecutar el workflow manualmente desde GitHub
   schedule:
     - cron: '0 */3 * * *'   # Cada 3 horas
-
+    
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:    
+
+    steps:
+      # 1. Clonar el repositorio
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Instalar yt-dlp
-        run: pip install -U yt-dlp
+      # 2. Configurar Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
+      # 3. Instalar dependencias (yt-dlp)
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yt-dlp
+
+      # 4. Dar permisos al script
       - name: Dar permisos al script
         run: chmod +x stream_extractor.py
 
-      - name: Ejecutar el script
-        run: ./stream_extractor.py
+      # 5. Ejecutar el script
+      - name: Run Stream Extractor
+        run: |
+          echo "[INFO] Ejecutando stream_extractor.py..."
+          python3 stream_extractor.py
 
-      - name: Subir streams.m3u generado
+      # 6. Commit y push del archivo generado
+      - name: Commit and push M3U
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: Actualiza streams.m3u automáticamente
+          commit_message: "Update streams.m3u [CI]"
           file_pattern: streams.m3u
+          branch: main
