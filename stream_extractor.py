@@ -14,19 +14,36 @@ def check_yt_dlp():
         print("[ERROR] yt-dlp no está instalado o no está en el PATH.")
         return False
 
-def get_m3u8_url(stream_url):
+def get_stream_info(stream_url):
+    """Obtiene URL M3U8 y título del stream con manejo de errores."""
     try:
+        # Extraer la mejor URL
         result = subprocess.run(
             ["yt-dlp", "-f", "best", "-g", stream_url],
             capture_output=True,
-            text=True,
-            check=True
+            text=True
         )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] yt-dlp falló con: {stream_url}")
-        print(e.stderr)
-        return None
+
+        if result.returncode != 0 or not result.stdout.strip():
+            print(f"[ERROR] No se pudo obtener URL para: {stream_url}")
+            print("[yt-dlp stderr]:", result.stderr)
+            return None, None
+
+        url = result.stdout.strip()
+
+        # Obtener título
+        title_result = subprocess.run(
+            ["yt-dlp", "--get-title", stream_url],
+            capture_output=True,
+            text=True
+        )
+
+        title = title_result.stdout.strip() if title_result.returncode == 0 else "Desconocido"
+        return url, title
+
+    except Exception as e:
+        print(f"[EXCEPTION] Error procesando {stream_url}: {e}")
+        return None, None
 
 def generate_m3u(input_path, output_path):
     if not os.path.exists(input_path):
