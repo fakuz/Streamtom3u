@@ -1,0 +1,28 @@
+name: Generar playlist M3U
+
+on:
+  workflow_dispatch:   # Permite ejecutar el workflow manualmente desde GitHub
+  schedule:
+    - cron: '0 */3 * * *'   # Cada 3 horas
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:    
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Instalar yt-dlp
+        run: pip install -U yt-dlp
+
+      - name: Dar permisos al script
+        run: chmod +x stream_extractor.py
+
+      - name: Ejecutar el script
+        run: ./stream_extractor.py
+
+      - name: Subir playlist.m3u generado
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Actualiza playlist.m3u automáticamente
+          file_pattern: playlist.m3u
