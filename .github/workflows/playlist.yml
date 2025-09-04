@@ -21,8 +21,8 @@ jobs:
       - name: Ejecutar el script
         run: ./stream_extractor.py
 
-      - name: Subir playlist.m3u generado
+      - name: Subir streams.m3u generado
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: Actualiza playlist.m3u automáticamente
-          file_pattern: playlist.m3u
+          commit_message: Actualiza streams.m3u automáticamente
+          file_pattern: streams.m3u
