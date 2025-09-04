@@ -7,7 +7,7 @@ INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 
 def check_yt_dlp():
-    """Verifica si yt-dlp está instalado y accesible."""
+    """Verifica si yt-dlp está instalado."""
     try:
         subprocess.run(["yt-dlp", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return True
@@ -19,14 +19,23 @@ def check_yt_dlp():
         return False
 
 def get_stream_info(stream_url):
-    """Obtiene URL M3U8 y título del stream con logs detallados."""
+    """Obtiene URL M3U8 y título del stream, con soporte para cookies."""
     try:
-        print(f"[DEBUG] Ejecutando yt-dlp para obtener la URL de: {stream_url}")
-        result = subprocess.run(
-            ["yt-dlp", "-f", "best", "-g", "--no-check-certificate", stream_url],
-            capture_output=True,
-            text=True
-        )
+        yt_dlp_cmd = [
+            "yt-dlp",
+            "-f", "b",  # Mejor opción para streams
+            "-g",
+            "--no-check-certificate"
+        ]
+
+        # Si hay cookies.txt, lo usamos
+        if os.path.exists("cookies.txt"):
+            yt_dlp_cmd += ["--cookies", "cookies.txt"]
+
+        yt_dlp_cmd.append(stream_url)
+
+        print(f"[DEBUG] Ejecutando: {' '.join(yt_dlp_cmd)}")
+        result = subprocess.run(yt_dlp_cmd, capture_output=True, text=True)
 
         if result.returncode != 0 or not result.stdout.strip():
             print(f"[ERROR] yt-dlp no devolvió URL para: {stream_url}")
@@ -37,14 +46,15 @@ def get_stream_info(stream_url):
         print(f"[INFO] URL obtenida: {url}")
 
         # Obtener título del stream
-        title_result = subprocess.run(
-            ["yt-dlp", "--get-title", stream_url],
-            capture_output=True,
-            text=True
-        )
+        title_cmd = ["yt-dlp", "--get-title"]
+        if os.path.exists("cookies.txt"):
+            title_cmd += ["--cookies", "cookies.txt"]
+        title_cmd.append(stream_url)
 
+        title_result = subprocess.run(title_cmd, capture_output=True, text=True)
         title = title_result.stdout.strip() if title_result.returncode == 0 else "Desconocido"
         print(f"[INFO] Título obtenido: {title}")
+
         return url, title
 
     except Exception as e:
