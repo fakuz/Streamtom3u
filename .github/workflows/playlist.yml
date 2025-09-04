@@ -22,24 +22,31 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 3. Instalar dependencias (yt-dlp)
-      - name: Install dependencies
+      # 3. Instalar yt-dlp
+      - name: Install yt-dlp
         run: |
           pip install --upgrade pip
           pip install yt-dlp
 
-      # 4. Dar permisos al script
+      # 4. Crear cookies.txt desde secreto (si existe)
+      - name: Crear cookies.txt desde GitHub Secrets
+        if: ${{ secrets.COOKIES_FILE != '' }}
+        run: |
+          echo "${{ secrets.COOKIES_FILE }}" > cookies.txt
+          echo "[INFO] Archivo cookies.txt creado"
+
+      # 5. Dar permisos al script
       - name: Dar permisos al script
         run: chmod +x stream_extractor.py
-
-      # 5. Ejecutar el script
-      - name: Run Stream Extractor
+      
+      # 6. Ejecutar el script
+      - name: Ejecutar script de extracción
         run: |
           echo "[INFO] Ejecutando stream_extractor.py..."
           python3 stream_extractor.py
 
-      # 6. Commit y push del archivo generado
-      - name: Commit and push M3U
+      # 7. Commit y push del archivo M3U
+      - name: Commit and push streams.m3u
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update streams.m3u [CI]"
