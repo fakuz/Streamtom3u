@@ -14,15 +14,13 @@ MAX_RESOLUTION = 1080        # Resolución máxima (ej. 720, 1080)
 CODEC = "h264"               # Opciones: "h264", "av1", "auto"
 FORCE_HLS = True             # True = Forzar streams HLS cuando sea posible
 
-# Fallback: video de YouTube cuando el canal falla
-FALLBACK_SOURCE = "https://www.youtube.com/watch?v=E-lbpHIkaTo"
-FALLBACK_STREAM = None
+# Fallback: archivo M3U8 fijo cuando el canal falla
+FALLBACK_STREAM = "https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8"
 
 # Lista de EPGs
 EPG_URLS = [
-    "https://iptv-epg.org/files/epg-ar.xml",
-    "https://iptv-epg.org/files/epg-us.xml",
-    "https://iptv-epg.org/files/epg-mx.xml"
+    "https://iptv-org.github.io/epg/guides/es.xml",
+    "https://iptv-org.github.io/epg/guides/us.xml"
 ]
 
 # Número máximo de hilos
@@ -78,14 +76,6 @@ def parse_line(line):
     channel = parts[2].strip() if len(parts) > 2 else None
     return url, category, channel
 
-def get_fallback_stream():
-    print(f"[INFO] Generando URL de fallback desde {FALLBACK_SOURCE}...")
-    cmd = ["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"]
-    if FORCE_HLS:
-        cmd.append("--hls-use-mpegts")
-    cmd.append(FALLBACK_SOURCE)
-    return run_command(cmd)
-
 def get_stream_info(line):
     url, category, channel_name = parse_line(line)
     try:
@@ -112,7 +102,7 @@ def get_stream_info(line):
         else:
             tvg_id = normalize_id(title)
 
-        # Si falla, usar fallback dinámico
+        # Si falla, usar fallback fijo
         if not m3u8_url:
             print(f"[WARNING] No se pudo obtener M3U8 de: {url}. Usando fallback.")
             title_display = f"{title} (OFF AIR)"
@@ -133,12 +123,6 @@ def get_stream_info(line):
         return f'#EXTINF:-1 group-title="{category}",{title_display}\n{FALLBACK_STREAM}\n'
 
 def generate_m3u(input_path, output_path):
-    global FALLBACK_STREAM
-    FALLBACK_STREAM = get_fallback_stream()
-    if not FALLBACK_STREAM:
-        print("[ERROR] No se pudo generar el fallback. Abortando.")
-        sys.exit(1)
-
     if not os.path.exists(input_path):
         print(f"[ERROR] No se encontró el archivo: {input_path}")
         return
@@ -165,7 +149,7 @@ def generate_m3u(input_path, output_path):
                     success_count += 1
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success_count} streams agregados (con fallback dinámico si falló).")
+    print(f"✔ {success_count} streams agregados (con fallback fijo si falló).")
 
 if __name__ == "__main__":
     if not check_yt_dlp():
@@ -175,4 +159,5 @@ if __name__ == "__main__":
         print(f"[INFO] El archivo {OUTPUT_FILE} ya existe. Será sobrescrito.")
 
     print(f"[CONFIG] Resolución máxima: {MAX_RESOLUTION}px | Códec preferido: {CODEC} | HLS forzado: {FORCE_HLS}")
+    print(f"[CONFIG] Fallback: {FALLBACK_STREAM}")
     generate_m3u(INPUT_FILE, OUTPUT_FILE)
