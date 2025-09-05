@@ -1,9 +1,9 @@
 name: Generar playlist M3U
 
 on:
-  workflow_dispatch:   # Permite ejecutar manualmente
+  workflow_dispatch:
   schedule:
-    - cron: '0 */3 * * *'   # Cada 3 horas
+    - cron: '0 */3 * * *'
 
 jobs:
   build:
@@ -21,7 +21,7 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install yt-dlp requests lxml rapidfuzz
+          pip install -r requirements.txt
 
       - name: Crear cookies.txt desde secreto base64
         env:
