@@ -5,8 +5,8 @@ import sys
 import re
 import requests
 import gzip
-import difflib
 import xml.etree.ElementTree as ET
+from rapidfuzz import fuzz, process
 
 # ==================== CONFIGURACIÓN ====================
 INPUT_FILE = "links.txt"
@@ -34,10 +34,16 @@ def check_yt_dlp():
 
 def normalize_name(name):
     """Normaliza nombre para comparación"""
-    name = re.sub(r"\b(en vivo|live)\b", "", name, flags=re.IGNORECASE)
-    name = re.sub(r"\d{4}-\d{2}-\d{2}", "", name)  # quitar fechas
+    name = name.lower()
+    # Quitar palabras irrelevantes
+    name = re.sub(r"\b(en vivo|live|transmisión|seguí|las 24 horas|en directo)\b", "", name)
+    # Quitar fechas y números largos
+    name = re.sub(r"\d{4}-\d{2}-\d{2}", "", name)
+    name = re.sub(r"\d{2}:\d{2}", "", name)
+    # Quitar guiones y caracteres extra
     name = re.sub(r"[-|]", " ", name)
-    return re.sub(r"\s+", " ", name).strip().lower()
+    # Quitar exceso de espacios
+    return re.sub(r"\s+", " ", name).strip()
 
 
 def load_epg():
@@ -100,11 +106,19 @@ def parse_line(line):
 
 
 def match_epg_name(original_name):
-    """Encuentra el nombre más similar en EPG, si existe"""
-    norm_name = normalize_name(original_name)
+    """Busca el nombre más parecido en EPG usando RapidFuzz"""
+    if not epg_channels:
+        return original_name
+
+    norm_original = normalize_name(original_name)
     epg_names = list(epg_channels.values())
-    best_match = difflib.get_close_matches(norm_name, [normalize_name(n) for n in epg_names], n=1, cutoff=0.6)
-    if best_match:
+    # Usamos RapidFuzz para coincidencia más agresiva
+    best_match = process.extractOne(
+        norm_original, 
+        [normalize_name(n) for n in epg_names], 
+        scorer=fuzz.token_sort_ratio
+    )
+    if best_match and best_match[1] >= 40:  # mínimo 40% de similitud
         idx = [normalize_name(n) for n in epg_names].index(best_match[0])
         return epg_names[idx]
     return original_name
