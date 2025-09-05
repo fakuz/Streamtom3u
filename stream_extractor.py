@@ -3,6 +3,9 @@ import subprocess
 import os
 import sys
 import re
+import json
+import urllib.request
+import difflib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ==================== CONFIGURACIÓN ====================
@@ -12,15 +15,32 @@ OUTPUT_FILE = "streams.m3u"
 # Forzar máximo 1080p
 FORMAT_SELECTOR = "bestvideo[height<=1080]+bestaudio/best"
 
-# Lista de EPGs (ahora incluye la nueva)
+# Lista de EPGs
 EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/es.xml",
     "https://iptv-org.github.io/epg/guides/us.xml",
     "https://epgshare01.online/epgshare01/epg_ripper_AR1.xml.gz"
 ]
 
-# Número máximo de hilos (ajusta según CPU)
-MAX_THREADS = 10
+# URL del JSON de canales oficiales
+CHANNELS_JSON_URL = "https://iptv-org.github.io/api/channels.json"
+CHANNELS_FILE = "channels.json"
+
+# Palabras irrelevantes en títulos
+IGNORE_WORDS = ["latino", "hd", "oficial", "tv", "canal", "channel"]
+
+# Mapeo de categorías para fallback
+CATEGORY_MAP = {
+    "películas": "Movies",
+    "cine": "Movies",
+    "deportes": "Sports",
+    "noticias": "News",
+    "infantil": "Kids",
+    "música": "Music"
+}
+
+# Número de hilos para paralelismo
+MAX_WORKERS = 8
 # =======================================================
 
 def check_yt_dlp():
@@ -57,34 +77,83 @@ def parse_line(line):
     category = parts[1].strip() if len(parts) > 1 else "General"
     return url, category
 
+def load_channels():
+    if not os.path.exists(CHANNELS_FILE):
+        urllib.request.urlretrieve(CHANNELS_JSON_URL, CHANNELS_FILE)
+    with open(CHANNELS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+CHANNELS = load_channels()
+
+def clean_name(name):
+    name = name.lower()
+    for word in IGNORE_WORDS:
+        name = name.replace(word, "")
+    return re.sub(r'[^a-z0-9 ]', '', name).strip()
+
+def find_epg_match(title, category):
+    cleaned_title = clean_name(title)
+    best_match = None
+    best_score = 0
+
+    # Intento 1: Coincidencia difusa por nombre
+    for channel in CHANNELS:
+        channel_name = clean_name(channel["name"])
+        score = difflib.SequenceMatcher(None, cleaned_title, channel_name).ratio()
+        if score > best_score:
+            best_score = score
+            best_match = channel
+
+    if best_match and best_score >= 0.8:
+        return best_match["id"], best_match["name"], best_match["logo"]
+
+    # Intento 2: Fallback por categoría
+    for key, mapped_cat in CATEGORY_MAP.items():
+        if key in category.lower():
+            for channel in CHANNELS:
+                if channel.get("category", "").lower() == mapped_cat.lower():
+                    return channel["id"], channel["name"], channel["logo"]
+            break
+
+    return None, None, None
+
 def get_stream_info(line):
     url, category = parse_line(line)
     try:
         auth_opts = get_auth_options(url)
 
-        # URL del stream en 1080p máximo
-        m3u8_url = run_command(["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"] + auth_opts + [url])
+        # URL del stream en máxima calidad (1080p máx)
+        cmd = [
+            "yt-dlp",
+            "-f", FORMAT_SELECTOR,
+            "-g", "--no-check-certificate"
+        ] + auth_opts + [url]
+
+        m3u8_url = run_command(cmd)
         if not m3u8_url:
             return None
 
-        # Título y logo
+        # Título
         title = run_command(["yt-dlp", "--get-title"] + auth_opts + [url]) or "Stream"
-        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [url])
 
-        # ID único
-        if "youtu" in url:
-            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", url)
-            tvg_id = match.group(1).lower() if match else normalize_id(title)
+        # Intentar match con EPG
+        epg_id, epg_name, epg_logo = find_epg_match(title, category)
+
+        if epg_id and epg_name:
+            tvg_id = epg_id
+            title = epg_name
+            logo = epg_logo
         else:
             tvg_id = normalize_id(title)
+            logo = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [url])
 
-        # Construir línea M3U
-        if thumbnail:
-            m3u_line = f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title}\n{m3u8_url}\n'
-        else:
-            m3u_line = f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{m3u8_url}\n'
-
-        return m3u_line
+        return {
+            "m3u8_url": m3u8_url,
+            "title": title,
+            "logo": logo,
+            "tvg_id": tvg_id,
+            "category": category
+        }
 
     except Exception:
         return None
@@ -101,27 +170,32 @@ def generate_m3u(input_path, output_path):
         print("[ERROR] El archivo links.txt está vacío.")
         return
 
+    success, fail = 0, 0
     epg_line = ",".join(EPG_URLS)
-    success_count = 0
-    fail_count = 0
+
+    results = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(get_stream_info, line): line for line in lines}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                results.append(result)
+                success += 1
+            else:
+                fail += 1
 
     with open(output_path, "w", encoding="utf-8") as out:
         out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
-
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            future_to_line = {executor.submit(get_stream_info, line): line for line in lines}
-            for future in as_completed(future_to_line):
-                result = future.result()
-                if result:
-                    out.write(result)
-                    success_count += 1
-                else:
-                    fail_count += 1
+        for r in results:
+            if r["logo"]:
+                out.write(f'#EXTINF:-1 tvg-id="{r["tvg_id"]}" tvg-logo="{r["logo"]}" group-title="{r["category"]}",{r["title"]}\n{r["m3u8_url"]}\n')
+            else:
+                out.write(f'#EXTINF:-1 tvg-id="{r["tvg_id"]}" group-title="{r["category"]}",{r["title"]}\n{r["m3u8_url"]}\n')
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success_count} streams agregados correctamente.")
-    if fail_count > 0:
-        print(f"⚠ {fail_count} enlaces fallaron.")
+    print(f"✔ {success} streams agregados correctamente.")
+    if fail > 0:
+        print(f"⚠ {fail} enlaces fallaron.")
 
 if __name__ == "__main__":
     if not check_yt_dlp():
