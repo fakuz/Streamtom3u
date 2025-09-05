@@ -2,91 +2,103 @@
 import subprocess
 import os
 import sys
+import re
 
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 
 def check_yt_dlp():
-    """Verifica si yt-dlp está instalado."""
     try:
         subprocess.run(["yt-dlp", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return True
     except FileNotFoundError:
-        print("[ERROR] yt-dlp no está instalado o no está en el PATH.")
+        print("[ERROR] yt-dlp no está instalado.")
         return False
-    except subprocess.CalledProcessError as e:
-        print("[ERROR] No se pudo ejecutar yt-dlp:", e.stderr)
-        return False
+
+def cookies_valid():
+    return (
+        os.path.exists("cookies.txt")
+        and os.path.getsize("cookies.txt") > 100
+        and open("cookies.txt", "r", encoding="utf-8").readline().strip().startswith("# Netscape")
+    )
+
+def get_auth_options(url):
+    if cookies_valid() and ("youtube.com" in url or "youtu.be" in url or "facebook.com" in url):
+        print("[INFO] Usando cookies.txt para autenticación.")
+        return ["--cookies", "cookies.txt"]
+    return []
+
+def run_command(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+def normalize_id(text):
+    return re.sub(r'[^a-z0-9]', '', text.lower())
+
+def parse_line(line):
+    """Devuelve (url, categoria) desde la línea del archivo."""
+    parts = line.split("|")
+    url = parts[0].strip()
+    category = parts[1].strip() if len(parts) > 1 else "General"
+    return url, category
 
 def get_stream_info(stream_url):
-    """Obtiene URL M3U8 y título del stream, con soporte para cookies."""
     try:
-        yt_dlp_cmd = [
-            "yt-dlp",
-            "-f", "b",  # Mejor opción para streams
-            "-g",
-            "--no-check-certificate"
-        ]
+        auth_opts = get_auth_options(stream_url)
 
-        # Si hay cookies.txt, lo usamos
-        if os.path.exists("cookies.txt"):
-            yt_dlp_cmd += ["--cookies", "cookies.txt"]
+        # URL del stream
+        url = run_command(["yt-dlp", "-f", "b", "-g", "--no-check-certificate"] + auth_opts + [stream_url])
+        if not url:
+            print(f"[ERROR] No se pudo obtener URL para: {stream_url}")
+            return None, None, None, None
 
-        yt_dlp_cmd.append(stream_url)
+        # Título
+        title = run_command(["yt-dlp", "--get-title"] + auth_opts + [stream_url]) or "Stream"
 
-        print(f"[DEBUG] Ejecutando: {' '.join(yt_dlp_cmd)}")
-        result = subprocess.run(yt_dlp_cmd, capture_output=True, text=True)
+        # Thumbnail
+        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url])
 
-        if result.returncode != 0 or not result.stdout.strip():
-            print(f"[ERROR] yt-dlp no devolvió URL para: {stream_url}")
-            print(f"[yt-dlp stderr]: {result.stderr.strip()}")
-            return None, None
+        # ID único
+        if "youtu" in stream_url:
+            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", stream_url)
+            tvg_id = match.group(1).lower() if match else normalize_id(title)
+        else:
+            tvg_id = normalize_id(title)
 
-        url = result.stdout.strip()
-        print(f"[INFO] URL obtenida: {url}")
-
-        # Obtener título del stream
-        title_cmd = ["yt-dlp", "--get-title"]
-        if os.path.exists("cookies.txt"):
-            title_cmd += ["--cookies", "cookies.txt"]
-        title_cmd.append(stream_url)
-
-        title_result = subprocess.run(title_cmd, capture_output=True, text=True)
-        title = title_result.stdout.strip() if title_result.returncode == 0 else "Desconocido"
-        print(f"[INFO] Título obtenido: {title}")
-
-        return url, title
+        return url, title, thumbnail, tvg_id
 
     except Exception as e:
         print(f"[EXCEPTION] Error procesando {stream_url}: {e}")
-        return None, None
+        return None, None, None, None
 
 def generate_m3u(input_path, output_path):
-    """Genera el archivo M3U a partir de los enlaces."""
     if not os.path.exists(input_path):
         print(f"[ERROR] No se encontró el archivo: {input_path}")
         return
 
     with open(input_path, "r", encoding="utf-8") as f:
-        links = [line.strip() for line in f if line.strip()]
+        lines = [line.strip() for line in f if line.strip()]
 
-    if not links:
+    if not lines:
         print("[ERROR] El archivo links.txt está vacío.")
         return
 
-    success = 0
-    fail = 0
+    success, fail = 0, 0
 
     with open(output_path, "w", encoding="utf-8") as out:
         out.write("#EXTM3U\n")
-        for link in links:
-            print(f"[INFO] Procesando: {link}")
-            m3u8_url, title = get_stream_info(link)
+        for line in lines:
+            url, category = parse_line(line)
+            print(f"[INFO] Procesando: {url} (Categoría: {category})")
+            m3u8_url, title, thumbnail, tvg_id = get_stream_info(url)
             if m3u8_url:
-                out.write(f"#EXTINF:-1,{title}\n{m3u8_url}\n")
+                if thumbnail:
+                    out.write(f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title}\n{m3u8_url}\n')
+                else:
+                    out.write(f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{m3u8_url}\n')
                 success += 1
             else:
-                print(f"[WARNING] No se pudo obtener M3U8 de: {link}")
+                print(f"[WARNING] No se pudo obtener M3U8 de: {url}")
                 fail += 1
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
