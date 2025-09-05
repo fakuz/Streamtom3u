@@ -3,54 +3,47 @@ name: Generar playlist M3U
 on:
   workflow_dispatch:   # Permite ejecutar el workflow manualmente desde GitHub
   schedule:
-    - cron: '0 */3 * * *'   # Cada 3 horas
+    - cron: '0 */3 * * *'   # Cada 3 horas    
     
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Clonar el repositorio
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. Instalar yt-dlp
       - name: Install yt-dlp
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install yt-dlp
 
-      # 4. Crear cookies.txt SOLO si el secreto existe (la verificación va dentro del script)
-      - name: Crear cookies.txt desde GitHub Secrets
+      - name: Crear cookies.txt desde secreto base64
         env:
-          COOKIES_FILE: ${{ secrets.COOKIES_FILE }}
+          COOKIES_B64: ${{ secrets.COOKIES_FILE_B64 }}
         run: |
-          if [ -n "$COOKIES_FILE" ]; then
-            printf '%s\n' "$COOKIES_FILE" > cookies.txt
+          if [ -n "$COOKIES_B64" ]; then
+            echo "$COOKIES_B64" | base64 -d > cookies.txt
             echo "[INFO] cookies.txt creado con $(wc -l < cookies.txt) líneas"
           else
-            echo "[WARNING] No se definió COOKIES_FILE. Continuando sin cookies."
+            echo "[WARNING] No se definió COOKIES_FILE_B64. Continuando sin cookies."
           fi
-          
-      # 5. Dar permisos al script
+
       - name: Dar permisos al script
         run: chmod +x stream_extractor.py
-      
-      # 6. Ejecutar el script
+
       - name: Ejecutar script de extracción
         run: |
           echo "[INFO] Ejecutando stream_extractor.py..."
           python3 stream_extractor.py
 
-      # 7. Commit y push del archivo M3U
       - name: Commit and push streams.m3u
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
