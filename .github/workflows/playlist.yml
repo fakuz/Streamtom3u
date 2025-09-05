@@ -29,9 +29,6 @@ jobs:
         run: |
           if [ -n "$COOKIES_B64" ]; then
             echo "$COOKIES_B64" | base64 -d > cookies.txt
-            echo "[INFO] cookies.txt creado con $(wc -l < cookies.txt) líneas"
-          else
-            echo "[WARNING] No se definió COOKIES_FILE_B64. Continuando sin cookies."
           fi
 
       - name: Dar permisos al script
