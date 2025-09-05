@@ -9,8 +9,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 
-# Forzar máximo 1080p
-FORMAT_SELECTOR = "bestvideo[height<=1080]+bestaudio/best"
+# Calidad y compatibilidad
+MAX_RESOLUTION = 1080        # Resolución máxima (ej. 720, 1080)
+CODEC = "h264"               # Opciones: "h264", "av1", "auto"
+FORCE_HLS = True             # True = Forzar streams HLS cuando sea posible
 
 # Lista de EPGs
 EPG_URLS = [
@@ -18,9 +20,23 @@ EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/us.xml"
 ]
 
-# Número máximo de hilos (ajusta según CPU)
+# Número máximo de hilos
 MAX_THREADS = 10
 # =======================================================
+
+def build_format_selector():
+    """Genera el formato según códec, resolución y preferencia HLS."""
+    if CODEC == "h264":
+        video_filter = f"bv*[height<={MAX_RESOLUTION}][vcodec*=avc1]"
+    elif CODEC == "av1":
+        video_filter = f"bv*[height<={MAX_RESOLUTION}][vcodec*=av01]"
+    else:  # auto
+        video_filter = f"bestvideo[height<={MAX_RESOLUTION}]"
+    
+    selector = f"{video_filter}+bestaudio/best"
+    return selector
+
+FORMAT_SELECTOR = build_format_selector()
 
 def check_yt_dlp():
     try:
@@ -62,8 +78,13 @@ def get_stream_info(line):
     try:
         auth_opts = get_auth_options(url)
 
-        # URL del stream en 1080p máximo
-        m3u8_url = run_command(["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"] + auth_opts + [url])
+        # Comando base para URL M3U8
+        cmd = ["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"]
+        if FORCE_HLS:
+            cmd.append("--hls-use-mpegts")
+        cmd += auth_opts + [url]
+
+        m3u8_url = run_command(cmd)
         if not m3u8_url:
             return None
 
@@ -135,4 +156,5 @@ if __name__ == "__main__":
     if os.path.exists(OUTPUT_FILE):
         print(f"[INFO] El archivo {OUTPUT_FILE} ya existe. Será sobrescrito.")
 
+    print(f"[CONFIG] Resolución máxima: {MAX_RESOLUTION}px | Códec preferido: {CODEC} | HLS forzado: {FORCE_HLS}")
     generate_m3u(INPUT_FILE, OUTPUT_FILE)
