@@ -3,7 +3,7 @@ name: Generar playlist M3U
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *' # Cada 3 horas
 
 jobs:
   build:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,7 +23,8 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          # Instalamos yt-dlp directamente (requirements.txt opcional)
+          pip install yt-dlp
 
       - name: Crear cookies.txt desde secreto base64
         env:
@@ -29,6 +32,9 @@ jobs:
         run: |
           if [ -n "$COOKIES_B64" ]; then
             echo "$COOKIES_B64" | base64 -d > cookies.txt
+            echo "[INFO] cookies.txt creado con $(wc -l < cookies.txt) líneas"
+          else
+            echo "[WARNING] No se definió COOKIES_FILE_B64. Continuando sin cookies."
           fi
 
       - name: Dar permisos al script
