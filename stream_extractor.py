@@ -4,8 +4,19 @@ import os
 import sys
 import re
 
+# ==================== CONFIGURACIÓN ====================
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
+
+# Selección de calidad:
+# - Máxima calidad: "bestvideo+bestaudio/best"
+# - Límite 1080p: "bestvideo[height<=1080]+bestaudio/best"
+# - Preferir AV1: "bestvideo[codec^=av01]+bestaudio/best"
+FORMAT_SELECTOR = "bestvideo+bestaudio/best"
+
+# URL del EPG (XMLTV)
+EPG_URL = "https://iptv-org.github.io/epg/guides/es.xml"
+# =======================================================
 
 def check_yt_dlp():
     try:
@@ -46,8 +57,15 @@ def get_stream_info(stream_url):
     try:
         auth_opts = get_auth_options(stream_url)
 
+        # Construir comando para obtener la mejor calidad disponible
+        cmd = [
+            "yt-dlp",
+            "-f", FORMAT_SELECTOR,
+            "-g", "--no-check-certificate"
+        ] + auth_opts + [stream_url]
+
         # URL del stream
-        url = run_command(["yt-dlp", "-f", "b", "-g", "--no-check-certificate"] + auth_opts + [stream_url])
+        url = run_command(cmd)
         if not url:
             print(f"[ERROR] No se pudo obtener URL para: {stream_url}")
             return None, None, None, None
@@ -58,7 +76,7 @@ def get_stream_info(stream_url):
         # Thumbnail
         thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url])
 
-        # ID único
+        # ID único (para EPG)
         if "youtu" in stream_url:
             match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", stream_url)
             tvg_id = match.group(1).lower() if match else normalize_id(title)
@@ -86,7 +104,7 @@ def generate_m3u(input_path, output_path):
     success, fail = 0, 0
 
     with open(output_path, "w", encoding="utf-8") as out:
-        out.write("#EXTM3U\n")
+        out.write(f'#EXTM3U url-tvg="{EPG_URL}"\n')
         for line in lines:
             url, category = parse_line(line)
             print(f"[INFO] Procesando: {url} (Categoría: {category})")
