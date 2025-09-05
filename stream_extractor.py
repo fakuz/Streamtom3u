@@ -16,8 +16,10 @@ FORCE_HLS = True             # True = Forzar streams HLS cuando sea posible
 
 # Lista de EPGs
 EPG_URLS = [
-    "https://iptv-org.github.io/epg/guides/es.xml",
-    "https://iptv-org.github.io/epg/guides/us.xml"
+    "https://iptv-epg.org/files/epg-ar.xml",
+    "https://iptv-epg.org/files/epg-us.xml",
+    "https://iptv-epg.org/files/epg-uy.xml",
+    "https://iptv-epg.org/files/epg-mx.xml"
 ]
 
 # Número máximo de hilos
