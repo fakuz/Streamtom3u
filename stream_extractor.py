@@ -8,6 +8,7 @@ import requests
 import xml.etree.ElementTree as ET
 import difflib
 from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 
 # ==================== CONFIGURACIÓN ====================
 INPUT_FILE = "links.txt"
@@ -15,6 +16,7 @@ OUTPUT_FILE = "streams.m3u"
 FORMAT_SELECTOR = "bestvideo[height<=1080]+bestaudio/best"  # Forzar 1080p
 THREADS = 8
 FUZZY_CUTOFF = 0.8
+MAX_RETRIES = 3
 
 EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/es.xml",
@@ -79,17 +81,20 @@ def parse_line(line):
     return url, category
 
 def download_epg(url):
-    try:
-        print(f"[INFO] Descargando EPG: {url}")
-        resp = requests.get(url, timeout=15)
-        if resp.status_code != 200:
-            return None
-        data = resp.content
-        if url.endswith(".gz"):
-            data = gzip.decompress(data)
-        return data.decode("utf-8", errors="ignore")
-    except:
-        return None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            print(f"[INFO] Descargando EPG ({attempt}/{MAX_RETRIES}): {url}")
+            resp = requests.get(url, timeout=30)
+            if resp.status_code == 200:
+                data = resp.content
+                if url.endswith(".gz"):
+                    data = gzip.decompress(data)
+                return data.decode("utf-8", errors="ignore")
+        except Exception as e:
+            print(f"[WARNING] Falló descarga de {url} (intento {attempt}): {e}")
+            sleep(2)
+    print(f"[ERROR] No se pudo descargar el EPG: {url}")
+    return None
 
 def load_epg(epg_urls):
     epg_channels = {}
@@ -105,9 +110,9 @@ def load_epg(epg_urls):
                 logo = ch.find("icon").get("src") if ch.find("icon") is not None else ""
                 if name:
                     epg_channels[name.lower()] = {"id": ch_id, "name": name, "logo": logo}
-        except:
-            continue
-    print(f"[INFO] Cargados {len(epg_channels)} canales desde EPG.")
+            print(f"[INFO] EPG procesado: {url} ({len(epg_channels)} canales acumulados)")
+        except Exception as e:
+            print(f"[ERROR] Falló parseo EPG {url}: {e}")
     return epg_channels
 
 def find_epg_match(title, epg_channels):
@@ -134,8 +139,8 @@ def get_stream_info(stream_url, category, epg_channels):
         if epg_name:
             return {
                 "url": url,
-                "title": epg_name,       # Forzar EPG en título
-                "description": epg_name, # Forzar descripción igual
+                "title": epg_name,
+                "description": epg_name,
                 "category": category,
                 "tvg_id": tvg_id,
                 "logo": logo or ""
@@ -149,7 +154,8 @@ def get_stream_info(stream_url, category, epg_channels):
                 "tvg_id": normalize_id(title),
                 "logo": run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url]) or ""
             }
-    except:
+    except Exception as e:
+        print(f"[ERROR] Falló procesamiento de {stream_url}: {e}")
         return None
 
 def generate_m3u(input_path, output_path, epg_channels):
@@ -173,7 +179,6 @@ def generate_m3u(input_path, output_path, epg_channels):
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
     print(f"✔ {len(results)} streams agregados correctamente.")
-
 # ==================== EJECUCIÓN ====================
 if __name__ == "__main__":
     if not check_yt_dlp():
