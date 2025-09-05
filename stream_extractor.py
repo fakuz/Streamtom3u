@@ -1,174 +1,138 @@
-#!/usr/bin/env python3
-import subprocess
 import os
-import sys
 import re
 import requests
 import gzip
-import io
-from lxml import etree
+import xml.etree.ElementTree as ET
 from rapidfuzz import process, fuzz
+from unidecode import unidecode
+import yt_dlp
 
-# ==================== CONFIGURACIÓN ====================
-INPUT_FILE = "links.txt"
-OUTPUT_FILE = "streams.m3u"
+M3U_HEADER = '#EXTM3U url-tvg="https://iptv-org.github.io/epg/guides/es.xml,https://iptv-org.github.io/epg/guides/us.xml,https://epgshare01.online/epgshare01/epg_ripper_AR1.xml.gz"'
 
-# Forzar 1080p máximo
-FORMAT_SELECTOR = "bestvideo[height<=1080]+bestaudio/best"
-
-# EPGs a usar
 EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/es.xml",
     "https://iptv-org.github.io/epg/guides/us.xml",
     "https://epgshare01.online/epgshare01/epg_ripper_AR1.xml.gz"
 ]
-# =======================================================
 
-def check_yt_dlp():
+OUTPUT_FILE = "streams.m3u"
+INPUT_FILE = "links.txt"
+
+
+def normalize_text(text):
+    """Convierte texto a minúsculas sin acentos ni caracteres especiales."""
+    return unidecode(text.strip().lower()) if text else ""
+
+
+def download_epg(url):
+    print(f"[INFO] Descargando EPG: {url}")
     try:
-        subprocess.run(["yt-dlp", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return True
-    except FileNotFoundError:
-        print("[ERROR] yt-dlp no está instalado.")
-        return False
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
 
-def cookies_valid():
-    return (
-        os.path.exists("cookies.txt")
-        and os.path.getsize("cookies.txt") > 100
-        and open("cookies.txt", "r", encoding="utf-8").readline().strip().startswith("# Netscape")
-    )
-
-def get_auth_options(url):
-    if cookies_valid() and ("youtube.com" in url or "youtu.be" in url or "facebook.com" in url):
-        return ["--cookies", "cookies.txt"]
-    return []
-
-def run_command(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.stdout.strip() if result.returncode == 0 else None
-
-def normalize_id(text):
-    return re.sub(r'[^a-z0-9]', '', text.lower())
-
-def parse_line(line):
-    """Devuelve (url, categoria) desde la línea del archivo."""
-    parts = line.split("|")
-    url = parts[0].strip()
-    category = parts[1].strip() if len(parts) > 1 else "General"
-    return url, category
-
-# ------------------- EPG HANDLING ----------------------
-def load_epg(epg_urls):
-    epg_channels = {}
-    for url in epg_urls:
-        try:
-            print(f"[INFO] Descargando EPG: {url}")
-            r = requests.get(url, timeout=15)
-            if url.endswith(".gz"):
-                with gzip.open(io.BytesIO(r.content), "rb") as f:
-                    content = f.read()
-            else:
-                content = r.content
-
-            root = etree.fromstring(content)
-            for ch in root.findall("channel"):
-                tvg_id = ch.get("id")
-                display_name = ch.findtext("display-name")
-                if tvg_id and display_name:
-                    epg_channels[tvg_id] = display_name
-        except Exception as e:
-            print(f"[WARNING] No se pudo procesar EPG {url}: {e}")
-    return epg_channels
-
-def match_channel(epg_channels, title):
-    if not epg_channels:
-        return None
-    names = list(epg_channels.values())
-    match, score, _ = process.extractOne(title, names, scorer=fuzz.token_sort_ratio)
-    return match if score >= 80 else None
-
-# ------------------- STREAM INFO -----------------------
-def get_stream_info(stream_url):
-    try:
-        auth_opts = get_auth_options(stream_url)
-
-        # Obtener mejor calidad disponible
-        cmd = [
-            "yt-dlp",
-            "-f", FORMAT_SELECTOR,
-            "-g", "--no-check-certificate"
-        ] + auth_opts + [stream_url]
-
-        url = run_command(cmd)
-        if not url:
-            return None, None, None, None
-
-        # Título
-        title = run_command(["yt-dlp", "--get-title"] + auth_opts + [stream_url]) or "Stream"
-
-        # Thumbnail
-        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url])
-
-        # ID único
-        if "youtu" in stream_url:
-            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", stream_url)
-            tvg_id = match.group(1).lower() if match else normalize_id(title)
+        # Si es .gz, descomprimir
+        if url.endswith(".gz"):
+            data = gzip.decompress(resp.content)
         else:
-            tvg_id = normalize_id(title)
+            data = resp.content
 
-        return url, title, thumbnail, tvg_id
+        return data
+    except Exception as e:
+        print(f"[ERROR] No se pudo descargar {url}: {e}")
+        return None
 
-    except Exception:
-        return None, None, None, None
 
-# ------------------- GENERAR M3U -----------------------
-def generate_m3u(input_path, output_path, epg_channels):
-    if not os.path.exists(input_path):
-        print(f"[ERROR] No se encontró el archivo: {input_path}")
-        return
+def parse_epg(epg_data):
+    epg_channels = {}
+    try:
+        root = ET.fromstring(epg_data)
+        for channel in root.findall("channel"):
+            tvg_id = channel.attrib.get("id", "").strip()
+            name_tag = channel.find("display-name")
+            name = name_tag.text.strip() if name_tag is not None else tvg_id
+            if tvg_id and name:
+                epg_channels[tvg_id] = name
+        return epg_channels
+    except Exception as e:
+        print(f"[ERROR] No se pudo procesar EPG: {e}")
+        return {}
 
-    with open(input_path, "r", encoding="utf-8") as f:
-        lines = [line.strip() for line in f if line.strip()]
 
-    if not lines:
-        print("[ERROR] El archivo links.txt está vacío.")
-        return
+def extract_stream_info(url):
+    """Obtiene título, thumbnail y stream URL usando yt-dlp."""
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "format": "best",
+        "cookies": "cookies.txt" if os.path.exists("cookies.txt") else None
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = info.get("title", "Sin título")
+            thumbnail = info.get("thumbnail", "")
+            final_url = info.get("url", url)
+            return title, thumbnail, final_url
+    except Exception as e:
+        print(f"[ERROR] No se pudo extraer info para {url}: {e}")
+        return None, None, url
 
-    epg_line = ",".join(EPG_URLS)
-    success = 0
+
+def find_best_match(title, epg_channels):
+    """Busca coincidencia exacta en tvg-id o fuzzy por nombre."""
+    normalized_title = normalize_text(title)
+
+    # 1. Coincidencia exacta con tvg-id (si existe)
+    if title in epg_channels:
+        return epg_channels[title]
+
+    # 2. Coincidencia fuzzy por nombre
+    choices = [(normalize_text(name), name) for name in epg_channels.values()]
+    match = process.extractOne(normalized_title, [c[0] for c in choices], scorer=fuzz.WRatio)
+    if match and match[1] > 85:  # Similaridad mínima 85%
+        index = [c[0] for c in choices].index(match[0])
+        return choices[index][1]
+
+    return None
+
+
+def main():
+    print("[INFO] Cargando EPG...")
+    epg_channels = {}
+    for url in EPG_URLS:
+        data = download_epg(url)
+        if data:
+            epg_channels.update(parse_epg(data))
+
+    print(f"[INFO] EPG cargado: {len(epg_channels)} canales")
 
     print("[INFO] Generando playlist...")
+    lines = [M3U_HEADER]
 
-    with open(output_path, "w", encoding="utf-8") as out:
-        out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
-        for line in lines:
-            url, category = parse_line(line)
-            m3u8_url, title, thumbnail, tvg_id = get_stream_info(url)
+    if not os.path.exists(INPUT_FILE):
+        print(f"[ERROR] No existe {INPUT_FILE}")
+        return
 
-            if not m3u8_url:
-                continue
+    with open(INPUT_FILE, "r", encoding="utf-8") as f:
+        urls = [line.strip() for line in f if line.strip()]
 
-            # Buscar coincidencia en EPG
-            epg_name = match_channel(epg_channels, title)
-            final_name = epg_name if epg_name else title
+    for url in urls:
+        title, logo, stream_url = extract_stream_info(url)
+        if not stream_url:
+            continue
 
-            if thumbnail:
-                out.write(f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{final_name}\n{m3u8_url}\n')
-            else:
-                out.write(f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{final_name}\n{m3u8_url}\n')
+        best_match = find_best_match(title, epg_channels)
+        final_name = best_match if best_match else title
 
-            success += 1
+        lines.append(f'#EXTINF:-1 tvg-id="" tvg-logo="{logo}" group-title="General",{final_name}')
+        lines.append(stream_url)
 
-    print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success} streams agregados correctamente.")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
 
-# ------------------- MAIN -----------------------
+    print(f"\n✅ Archivo M3U generado: {OUTPUT_FILE}")
+    print(f"✔ {len(urls)} streams agregados correctamente.")
+
+
 if __name__ == "__main__":
-    if not check_yt_dlp():
-        sys.exit(1)
-
-    print("[INFO] Descargando EPG...")
-    epg_channels = load_epg(EPG_URLS)
-
-    generate_m3u(INPUT_FILE, OUTPUT_FILE, epg_channels)
+    main()
