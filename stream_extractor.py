@@ -14,12 +14,14 @@ MAX_RESOLUTION = 1080        # Resolución máxima (ej. 720, 1080)
 CODEC = "h264"               # Opciones: "h264", "av1", "auto"
 FORCE_HLS = True             # True = Forzar streams HLS cuando sea posible
 
+# Fallback: video de YouTube cuando el canal falla
+FALLBACK_SOURCE = "https://www.youtube.com/watch?v=E-lbpHIkaTo"
+FALLBACK_STREAM = None
+
 # Lista de EPGs
 EPG_URLS = [
-    "https://iptv-epg.org/files/epg-ar.xml",
-    "https://iptv-epg.org/files/epg-us.xml",
-    "https://iptv-epg.org/files/epg-uy.xml",
-    "https://iptv-epg.org/files/epg-mx.xml"
+    "https://iptv-org.github.io/epg/guides/es.xml",
+    "https://iptv-org.github.io/epg/guides/us.xml"
 ]
 
 # Número máximo de hilos
@@ -75,6 +77,14 @@ def parse_line(line):
     channel = parts[2].strip() if len(parts) > 2 else None
     return url, category, channel
 
+def get_fallback_stream():
+    print(f"[INFO] Generando URL de fallback desde {FALLBACK_SOURCE}...")
+    cmd = ["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"]
+    if FORCE_HLS:
+        cmd.append("--hls-use-mpegts")
+    cmd.append(FALLBACK_SOURCE)
+    return run_command(cmd)
+
 def get_stream_info(line):
     url, category, channel_name = parse_line(line)
     try:
@@ -87,14 +97,9 @@ def get_stream_info(line):
         cmd += auth_opts + [url]
 
         m3u8_url = run_command(cmd)
-        if not m3u8_url:
-            return None
 
         # Título: usar canal si está, sino el título original
-        if channel_name:
-            title = channel_name
-        else:
-            title = run_command(["yt-dlp", "--get-title"] + auth_opts + [url]) or "Stream"
+        title = channel_name or run_command(["yt-dlp", "--get-title"] + auth_opts + [url]) or "Stream"
 
         # Thumbnail
         thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [url])
@@ -106,18 +111,33 @@ def get_stream_info(line):
         else:
             tvg_id = normalize_id(title)
 
-        # Construir línea M3U
-        if thumbnail:
-            m3u_line = f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title}\n{m3u8_url}\n'
-        else:
-            m3u_line = f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{m3u8_url}\n'
+        # Si falla, usar fallback dinámico
+        if not m3u8_url:
+            print(f"[WARNING] No se pudo obtener M3U8 de: {url}. Usando fallback.")
+            title_display = f"{title} (OFF AIR)"
+            if thumbnail:
+                return f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title_display}\n{FALLBACK_STREAM}\n'
+            else:
+                return f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title_display}\n{FALLBACK_STREAM}\n'
 
-        return m3u_line
+        # Si funciona, usar stream real
+        if thumbnail:
+            return f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title}\n{m3u8_url}\n'
+        else:
+            return f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{m3u8_url}\n'
 
     except Exception:
-        return None
+        # Si hay error inesperado, también fallback
+        title_display = (channel_name or "Stream") + " (OFF AIR)"
+        return f'#EXTINF:-1 group-title="{category}",{title_display}\n{FALLBACK_STREAM}\n'
 
 def generate_m3u(input_path, output_path):
+    global FALLBACK_STREAM
+    FALLBACK_STREAM = get_fallback_stream()
+    if not FALLBACK_STREAM:
+        print("[ERROR] No se pudo generar el fallback. Abortando.")
+        sys.exit(1)
+
     if not os.path.exists(input_path):
         print(f"[ERROR] No se encontró el archivo: {input_path}")
         return
@@ -131,7 +151,6 @@ def generate_m3u(input_path, output_path):
 
     epg_line = ",".join(EPG_URLS)
     success_count = 0
-    fail_count = 0
 
     with open(output_path, "w", encoding="utf-8") as out:
         out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
@@ -143,13 +162,9 @@ def generate_m3u(input_path, output_path):
                 if result:
                     out.write(result)
                     success_count += 1
-                else:
-                    fail_count += 1
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success_count} streams agregados correctamente.")
-    if fail_count > 0:
-        print(f"⚠ {fail_count} enlaces fallaron.")
+    print(f"✔ {success_count} streams agregados (con fallback dinámico si falló).")
 
 if __name__ == "__main__":
     if not check_yt_dlp():
