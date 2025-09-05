@@ -3,22 +3,23 @@ import subprocess
 import os
 import sys
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ==================== CONFIGURACIÓN ====================
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 
-# Selección de calidad:
-# - Máxima calidad: "bestvideo+bestaudio/best"
-# - Límite 1080p: "bestvideo[height<=1080]+bestaudio/best"
-# - Preferir AV1: "bestvideo[codec^=av01]+bestaudio/best"
+# Calidad máxima
 FORMAT_SELECTOR = "bestvideo+bestaudio/best"
 
-# Lista de EPGs (puedes agregar varias separadas por coma)
+# Lista de EPGs
 EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/es.xml",
     "https://iptv-org.github.io/epg/guides/us.xml"
 ]
+
+# Número máximo de hilos (ajusta según CPU)
+MAX_THREADS = 10
 # =======================================================
 
 def check_yt_dlp():
@@ -38,7 +39,6 @@ def cookies_valid():
 
 def get_auth_options(url):
     if cookies_valid() and ("youtube.com" in url or "youtu.be" in url or "facebook.com" in url):
-        print("[INFO] Usando cookies.txt para autenticación.")
         return ["--cookies", "cookies.txt"]
     return []
 
@@ -56,41 +56,37 @@ def parse_line(line):
     category = parts[1].strip() if len(parts) > 1 else "General"
     return url, category
 
-def get_stream_info(stream_url):
+def get_stream_info(line):
+    url, category = parse_line(line)
     try:
-        auth_opts = get_auth_options(stream_url)
+        auth_opts = get_auth_options(url)
 
-        # Construir comando para obtener la mejor calidad disponible
-        cmd = [
-            "yt-dlp",
-            "-f", FORMAT_SELECTOR,
-            "-g", "--no-check-certificate"
-        ] + auth_opts + [stream_url]
+        # URL del stream en mejor calidad
+        m3u8_url = run_command(["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"] + auth_opts + [url])
+        if not m3u8_url:
+            return None
 
-        # URL del stream
-        url = run_command(cmd)
-        if not url:
-            print(f"[ERROR] No se pudo obtener URL para: {stream_url}")
-            return None, None, None, None
+        # Título y logo
+        title = run_command(["yt-dlp", "--get-title"] + auth_opts + [url]) or "Stream"
+        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [url])
 
-        # Título
-        title = run_command(["yt-dlp", "--get-title"] + auth_opts + [stream_url]) or "Stream"
-
-        # Thumbnail
-        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url])
-
-        # ID único (para EPG)
-        if "youtu" in stream_url:
-            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", stream_url)
+        # ID único
+        if "youtu" in url:
+            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", url)
             tvg_id = match.group(1).lower() if match else normalize_id(title)
         else:
             tvg_id = normalize_id(title)
 
-        return url, title, thumbnail, tvg_id
+        # Construir línea M3U
+        if thumbnail:
+            m3u_line = f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title}\n{m3u8_url}\n'
+        else:
+            m3u_line = f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{m3u8_url}\n'
 
-    except Exception as e:
-        print(f"[EXCEPTION] Error procesando {stream_url}: {e}")
-        return None, None, None, None
+        return m3u_line
+
+    except Exception:
+        return None
 
 def generate_m3u(input_path, output_path):
     if not os.path.exists(input_path):
@@ -104,30 +100,27 @@ def generate_m3u(input_path, output_path):
         print("[ERROR] El archivo links.txt está vacío.")
         return
 
-    success, fail = 0, 0
-
     epg_line = ",".join(EPG_URLS)
+    success_count = 0
+    fail_count = 0
 
     with open(output_path, "w", encoding="utf-8") as out:
         out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
-        for line in lines:
-            url, category = parse_line(line)
-            print(f"[INFO] Procesando: {url} (Categoría: {category})")
-            m3u8_url, title, thumbnail, tvg_id = get_stream_info(url)
-            if m3u8_url:
-                if thumbnail:
-                    out.write(f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-logo="{thumbnail}" group-title="{category}",{title}\n{m3u8_url}\n')
+
+        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            future_to_line = {executor.submit(get_stream_info, line): line for line in lines}
+            for future in as_completed(future_to_line):
+                result = future.result()
+                if result:
+                    out.write(result)
+                    success_count += 1
                 else:
-                    out.write(f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{m3u8_url}\n')
-                success += 1
-            else:
-                print(f"[WARNING] No se pudo obtener M3U8 de: {url}")
-                fail += 1
+                    fail_count += 1
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success} streams agregados correctamente.")
-    if fail > 0:
-        print(f"⚠ {fail} enlaces fallaron.")
+    print(f"✔ {success_count} streams agregados correctamente.")
+    if fail_count > 0:
+        print(f"⚠ {fail_count} enlaces fallaron.")
 
 if __name__ == "__main__":
     if not check_yt_dlp():
