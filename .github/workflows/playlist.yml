@@ -23,6 +23,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install yt-dlp
 
+      - name: Instalar dependencias del script
+        run: |
+          pip install requests
+
       - name: Crear cookies.txt desde secreto base64
         env:
           COOKIES_B64: ${{ secrets.COOKIES_FILE_B64 }}
