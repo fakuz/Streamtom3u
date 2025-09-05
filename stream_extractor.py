@@ -7,6 +7,7 @@ import json
 import gzip
 import urllib.request
 import xml.etree.ElementTree as ET
+import difflib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ==================== CONFIGURACIÓN ====================
@@ -23,6 +24,9 @@ EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/us.xml",
     "https://epgshare01.online/epgshare01/epg_ripper_AR1.xml.gz"
 ]
+
+# Nivel mínimo de similitud para considerar un match (0 a 1)
+FUZZY_CUTOFF = 0.8
 # =======================================================
 
 EPG_CACHE = "channels.json"
@@ -81,7 +85,10 @@ def download_epg_data():
             for channel in root.findall("channel"):
                 cid = channel.attrib.get("id")
                 name = channel.findtext("display-name")
-                logo = channel.findtext("icon") or ""
+                logo = ""
+                icon = channel.find("icon")
+                if icon is not None and "src" in icon.attrib:
+                    logo = icon.attrib["src"]
                 if cid and name:
                     channels[name.lower()] = {"id": cid, "name": name, "logo": logo}
         except Exception:
@@ -94,8 +101,11 @@ def download_epg_data():
 
 def find_epg_match(title, epg_channels):
     key = title.lower()
-    if key in epg_channels:
-        return epg_channels[key]["id"], epg_channels[key]["name"], epg_channels[key]["logo"]
+    names = list(epg_channels.keys())
+    match = difflib.get_close_matches(key, names, n=1, cutoff=FUZZY_CUTOFF)
+    if match:
+        best = match[0]
+        return epg_channels[best]["id"], epg_channels[best]["name"], epg_channels[best]["logo"]
     return None, None, None
 
 def get_stream_info(stream_url, category, epg_channels):
@@ -110,12 +120,12 @@ def get_stream_info(stream_url, category, epg_channels):
         # Obtener título original
         title = run_command(["yt-dlp", "--get-title"] + auth_opts + [stream_url]) or "Stream"
 
-        # Buscar match en EPG
+        # Buscar match en EPG (con fuzzy matching)
         epg_id, epg_name, epg_logo = find_epg_match(title, epg_channels)
 
         if epg_id and epg_name:
             tvg_id = epg_id
-            title = epg_name  # Forzar nombre oficial
+            title = epg_name  # Forzar nombre oficial si hay match
             logo = epg_logo
         else:
             tvg_id = normalize_id(title)
