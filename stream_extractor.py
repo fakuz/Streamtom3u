@@ -14,8 +14,11 @@ OUTPUT_FILE = "streams.m3u"
 # - Preferir AV1: "bestvideo[codec^=av01]+bestaudio/best"
 FORMAT_SELECTOR = "bestvideo+bestaudio/best"
 
-# URL del EPG (XMLTV)
-EPG_URL = "https://iptv-org.github.io/epg/guides/es.xml"
+# Lista de EPGs (puedes agregar varias separadas por coma)
+EPG_URLS = [
+    "https://iptv-org.github.io/epg/guides/es.xml",
+    "https://iptv-org.github.io/epg/guides/us.xml"
+]
 # =======================================================
 
 def check_yt_dlp():
@@ -103,8 +106,10 @@ def generate_m3u(input_path, output_path):
 
     success, fail = 0, 0
 
+    epg_line = ",".join(EPG_URLS)
+
     with open(output_path, "w", encoding="utf-8") as out:
-        out.write(f'#EXTM3U url-tvg="{EPG_URL}"\n')
+        out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
         for line in lines:
             url, category = parse_line(line)
             print(f"[INFO] Procesando: {url} (Categoría: {category})")
