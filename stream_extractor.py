@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import gzip
+import requests
 import xml.etree.ElementTree as ET
 import difflib
 from concurrent.futures import ThreadPoolExecutor
@@ -77,19 +78,27 @@ def parse_line(line):
     category = parts[1].strip() if len(parts) > 1 else "General"
     return url, category
 
+def download_epg(url):
+    try:
+        print(f"[INFO] Descargando EPG: {url}")
+        resp = requests.get(url, timeout=15)
+        if resp.status_code != 200:
+            return None
+        data = resp.content
+        if url.endswith(".gz"):
+            data = gzip.decompress(data)
+        return data.decode("utf-8", errors="ignore")
+    except:
+        return None
+
 def load_epg(epg_urls):
     epg_channels = {}
     for url in epg_urls:
+        xml_data = download_epg(url)
+        if not xml_data:
+            continue
         try:
-            data = run_command(["curl", "-s", url])
-            if not data:
-                continue
-
-            if url.endswith(".gz"):
-                data = gzip.decompress(data.encode("latin1")).decode("utf-8")
-
-            root = ET.fromstring(data)
-
+            root = ET.fromstring(xml_data)
             for ch in root.findall("channel"):
                 ch_id = ch.get("id")
                 name = ch.findtext("display-name", "").strip()
@@ -98,6 +107,7 @@ def load_epg(epg_urls):
                     epg_channels[name.lower()] = {"id": ch_id, "name": name, "logo": logo}
         except:
             continue
+    print(f"[INFO] Cargados {len(epg_channels)} canales desde EPG.")
     return epg_channels
 
 def find_epg_match(title, epg_channels):
@@ -124,8 +134,8 @@ def get_stream_info(stream_url, category, epg_channels):
         if epg_name:
             return {
                 "url": url,
-                "title": epg_name,      # Forzar EPG en título
-                "description": epg_name, # Forzar EPG en descripción
+                "title": epg_name,       # Forzar EPG en título
+                "description": epg_name, # Forzar descripción igual
                 "category": category,
                 "tvg_id": tvg_id,
                 "logo": logo or ""
