@@ -12,8 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 FORMAT_SELECTOR = "bestvideo[height<=1080]+bestaudio/best"  # Forzar 1080p
-THREADS = 8  # Número de hilos para procesamiento paralelo
-FUZZY_CUTOFF = 0.8  # Nivel de coincidencia para EPG
+THREADS = 8
+FUZZY_CUTOFF = 0.8
 
 EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/es.xml",
@@ -22,25 +22,15 @@ EPG_URLS = [
 ]
 # ========================================================
 
-# Palabras irrelevantes para normalización de nombres
 STOPWORDS = [
-    # Generales
     "en vivo", "live", "hd", "1080p", "720p", "4k", "oficial", "canal", "latino", "24/7", "tv",
-    # Deportes
     "deportes", "sport", "partido", "match", "game", "en directo", "liga", "champions", "nba", "nfl", "mlb",
-    # Películas
     "películas", "movies", "cine", "film", "estreno", "movie",
-    # Series
     "series", "temporada", "episodio", "capítulo", "telenovela",
-    # Noticias
     "noticias", "news", "actualidad", "breaking news", "última hora",
-    # Música
     "música", "music", "concierto", "live music", "videoclip", "festival", "radio", "hit", "top",
-    # Infantil
     "niños", "kids", "cartoon", "dibujos", "infantil", "animación",
-    # Documentales
     "documental", "docu", "historia", "nature", "science", "wild",
-    # Religión
     "misa", "iglesia", "gospel", "oración", "prayer", "mass"
 ]
 
@@ -91,19 +81,14 @@ def load_epg(epg_urls):
     epg_channels = {}
     for url in epg_urls:
         try:
+            data = run_command(["curl", "-s", url])
+            if not data:
+                continue
+
             if url.endswith(".gz"):
-                data = run_command(["curl", "-s", url])
-                if data:
-                    data = gzip.decompress(data.encode("latin1")).decode("utf-8")
-                    root = ET.fromstring(data)
-                else:
-                    continue
-            else:
-                data = run_command(["curl", "-s", url])
-                if data:
-                    root = ET.fromstring(data)
-                else:
-                    continue
+                data = gzip.decompress(data.encode("latin1")).decode("utf-8")
+
+            root = ET.fromstring(data)
 
             for ch in root.findall("channel"):
                 ch_id = ch.get("id")
@@ -137,18 +122,23 @@ def get_stream_info(stream_url, category, epg_channels):
         tvg_id, epg_name, logo = find_epg_match(title, epg_channels)
 
         if epg_name:
-            title = epg_name
+            return {
+                "url": url,
+                "title": epg_name,      # Forzar EPG en título
+                "description": epg_name, # Forzar EPG en descripción
+                "category": category,
+                "tvg_id": tvg_id,
+                "logo": logo or ""
+            }
         else:
-            tvg_id = normalize_id(title)
-            logo = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url])
-
-        return {
-            "url": url,
-            "title": title,
-            "category": category,
-            "tvg_id": tvg_id,
-            "logo": logo or ""
-        }
+            return {
+                "url": url,
+                "title": title,
+                "description": title,
+                "category": category,
+                "tvg_id": normalize_id(title),
+                "logo": run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [stream_url]) or ""
+            }
     except:
         return None
 
@@ -169,7 +159,7 @@ def generate_m3u(input_path, output_path, epg_channels):
     with open(output_path, "w", encoding="utf-8") as out:
         out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
         for r in results:
-            out.write(f'#EXTINF:-1 tvg-id="{r["tvg_id"]}" tvg-logo="{r["logo"]}" group-title="{r["category"]}",{r["title"]}\n{r["url"]}\n')
+            out.write(f'#EXTINF:-1 tvg-id="{r["tvg_id"]}" tvg-logo="{r["logo"]}" group-title="{r["category"]}",{r["description"]}\n{r["url"]}\n')
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
     print(f"✔ {len(results)} streams agregados correctamente.")
