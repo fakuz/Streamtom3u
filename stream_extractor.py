@@ -9,13 +9,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 
-# Calidad máxima
-FORMAT_SELECTOR = "bestvideo+bestaudio/best"
+# Forzar máximo 1080p
+FORMAT_SELECTOR = "bestvideo[height<=1080]+bestaudio/best"
 
-# Lista de EPGs
+# Lista de EPGs (ahora incluye la nueva)
 EPG_URLS = [
     "https://iptv-org.github.io/epg/guides/es.xml",
-    "https://iptv-org.github.io/epg/guides/us.xml"
+    "https://iptv-org.github.io/epg/guides/us.xml",
+    "https://epgshare01.online/epgshare01/epg_ripper_AR1.xml.gz"
 ]
 
 # Número máximo de hilos (ajusta según CPU)
@@ -61,7 +62,7 @@ def get_stream_info(line):
     try:
         auth_opts = get_auth_options(url)
 
-        # URL del stream en mejor calidad
+        # URL del stream en 1080p máximo
         m3u8_url = run_command(["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"] + auth_opts + [url])
         if not m3u8_url:
             return None
