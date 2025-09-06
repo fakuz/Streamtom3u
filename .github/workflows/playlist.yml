@@ -1,43 +1,59 @@
-name: Generar playlist M3U
+name: Generar playlist M3U con Proxies y Fallback
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */3 * * *' # Cada 3 horas
+    - cron: '0 */3 * * *'  # Cada 3 horas
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Descargar el repositorio
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2. Instalar Python
-      - name: Set up Python
+      - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. Instalar dependencias
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Dar permisos al script
+      - name: Crear cookies.txt (si existe secreto)
+        env:
+          COOKIES_B64: ${{ secrets.COOKIES_FILE_B64 }}
+        run: |
+          if [ -n "$COOKIES_B64" ]; then
+            echo "$COOKIES_B64" | base64 -d > cookies.txt
+            echo "[INFO] cookies.txt creado con $(wc -l < cookies.txt) líneas"
+          else
+            echo "[WARNING] No se definió COOKIES_FILE_B64. Continuando sin cookies."
+          fi
+
+      - name: Crear proxies.txt (si existe secreto)
+        env:
+          PROXIES_B64: ${{ secrets.PROXIES_FILE_B64 }}
+        run: |
+          if [ -n "$PROXIES_B64" ]; then
+            echo "$PROXIES_B64" | base64 -d > proxies.txt
+            echo "[INFO] proxies.txt creado con $(wc -l < proxies.txt) líneas"
+          else
+            echo "[INFO] No se definió PROXIES_FILE_B64. Se usará sin proxies."
+          fi
+
       - name: Dar permisos al script
         run: chmod +x stream_extractor.py
 
-      # 5. Ejecutar script para generar streams.m3u
       - name: Ejecutar script de extracción
         run: |
           echo "[INFO] Ejecutando stream_extractor.py..."
           python3 stream_extractor.py
 
-      # 6. Commit y push del archivo streams.m3u actualizado
-      - name: Commit and push streams.m3u
+      - name: Commit y push del archivo M3U
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update streams.m3u [CI]"
