@@ -11,17 +11,16 @@ OUTPUT_FILE = "streams.m3u"
 
 # Calidad y compatibilidad
 MAX_RESOLUTION = 1080        # Resolución máxima (ej. 720, 1080)
-CODEC = "h264"               # Opciones: "h264", "av1", "auto"
 FORCE_HLS = True             # True = Forzar streams HLS cuando sea posible
+CODEC_FILTER = "[vcodec*=avc1]"  # Forzar H.264 (mejor compatibilidad)
 
 # Fallback: archivo M3U8 fijo cuando el canal falla
 FALLBACK_STREAM = "https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8"
 
 # Lista de EPGs
 EPG_URLS = [
-    "https://iptv-epg.org/files/epg-ar.xml",
-    "https://iptv-epg.org/files/epg-us.xml",
-    "https://iptv-epg.org/files/epg-mx.xml"
+    "https://iptv-org.github.io/epg/guides/es.xml",
+    "https://iptv-org.github.io/epg/guides/us.xml"
 ]
 
 # Número máximo de hilos
@@ -29,16 +28,7 @@ MAX_THREADS = 10
 # =======================================================
 
 def build_format_selector():
-    """Genera el formato según códec, resolución y preferencia HLS."""
-    if CODEC == "h264":
-        video_filter = f"bv*[height<={MAX_RESOLUTION}][vcodec*=avc1]"
-    elif CODEC == "av1":
-        video_filter = f"bv*[height<={MAX_RESOLUTION}][vcodec*=av01]"
-    else:  # auto
-        video_filter = f"bestvideo[height<={MAX_RESOLUTION}]"
-    
-    selector = f"{video_filter}+bestaudio/best"
-    return selector
+    return f"bv*[height<={MAX_RESOLUTION}]{CODEC_FILTER}+bestaudio/best"
 
 FORMAT_SELECTOR = build_format_selector()
 
@@ -50,17 +40,8 @@ def check_yt_dlp():
         print("[ERROR] yt-dlp no está instalado.")
         return False
 
-def cookies_valid():
-    return (
-        os.path.exists("cookies.txt")
-        and os.path.getsize("cookies.txt") > 100
-        and open("cookies.txt", "r", encoding="utf-8").readline().strip().startswith("# Netscape")
-    )
-
-def get_auth_options(url):
-    if cookies_valid() and ("youtube.com" in url or "youtu.be" in url or "facebook.com" in url):
-        return ["--cookies", "cookies.txt"]
-    return []
+def cookies_available():
+    return os.path.exists("cookies.txt") and os.path.getsize("cookies.txt") > 0
 
 def run_command(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -80,21 +61,21 @@ def parse_line(line):
 def get_stream_info(line):
     url, category, channel_name = parse_line(line)
     try:
-        auth_opts = get_auth_options(url)
-
-        # Comando base para URL M3U8
+        # Construir comando para URL M3U8
         cmd = ["yt-dlp", "-f", FORMAT_SELECTOR, "-g", "--no-check-certificate"]
         if FORCE_HLS:
             cmd.append("--hls-use-mpegts")
-        cmd += auth_opts + [url]
+        if cookies_available():
+            cmd += ["--cookies", "cookies.txt"]
+        cmd.append(url)
 
         m3u8_url = run_command(cmd)
 
         # Título: usar canal si está, sino el título original
-        title = channel_name or run_command(["yt-dlp", "--get-title"] + auth_opts + [url]) or "Stream"
+        title = channel_name or run_command(["yt-dlp", "--get-title"] + (["--cookies", "cookies.txt"] if cookies_available() else []) + [url]) or "Stream"
 
         # Thumbnail
-        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + auth_opts + [url])
+        thumbnail = run_command(["yt-dlp", "--get-thumbnail"] + (["--cookies", "cookies.txt"] if cookies_available() else []) + [url])
 
         # ID único
         if "youtu" in url:
@@ -150,7 +131,7 @@ def generate_m3u(input_path, output_path):
                     success_count += 1
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success_count} streams agregados (con fallback fijo si falló).")
+    print(f"✔ {success_count} streams agregados (con fallback si falló).")
 
 if __name__ == "__main__":
     if not check_yt_dlp():
@@ -159,6 +140,7 @@ if __name__ == "__main__":
     if os.path.exists(OUTPUT_FILE):
         print(f"[INFO] El archivo {OUTPUT_FILE} ya existe. Será sobrescrito.")
 
-    print(f"[CONFIG] Resolución máxima: {MAX_RESOLUTION}px | Códec preferido: {CODEC} | HLS forzado: {FORCE_HLS}")
+    print(f"[CONFIG] Resolución máxima: {MAX_RESOLUTION}px | Códec: H.264 | HLS forzado: {FORCE_HLS}")
     print(f"[CONFIG] Fallback: {FALLBACK_STREAM}")
+    print(f"[CONFIG] Cookies: {'Sí (cookies.txt encontrado)' if cookies_available() else 'No'}")
     generate_m3u(INPUT_FILE, OUTPUT_FILE)
