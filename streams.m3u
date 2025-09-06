@@ -1,25 +1,25 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv35eynxh1oyu" group-title="Radio",https://www.youtube.com/watch?v=35eynXh1OYU
+#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvg3vbksbx87i" group-title="Noticias",https://www.youtube.com/watch?v=g3vbKsbx87I
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvolmitr2oueu" group-title="Noticias",https://www.youtube.com/watch?v=OLMiTr2OUeU
+#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv35eynxh1oyu" group-title="Radio",https://www.youtube.com/watch?v=35eynXh1OYU
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="httpswwwtwitchtvyasserhaedo" group-title="Gaming",https://www.twitch.tv/yasserhaedo
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv5fls4vyq" group-title="Noticias",https://www.youtube.com/watch?v=5f__Ls4_VYQ
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv8mw0ydkn2xy" group-title="Musica",https://www.youtube.com/watch?v=8Mw0YdKN2XY
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvg3vbksbx87i" group-title="Noticias",https://www.youtube.com/watch?v=g3vbKsbx87I
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv12xrdxb13cc" group-title="Noticias",https://www.youtube.com/watch?v=12xrDxb13cc
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvarkbax1k2u" group-title="Noticias",https://www.youtube.com/watch?v=ArKbAx1K-2U
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvuozijhrtvippygudqzvu" group-title="Noticias",https://www.youtube.com/watch?v=Uo-ziJhrTvI&pp=ygUDQzVu
+#EXTINF:-1 tvg-id="httpsmyoutubecomwatchvuozijhrtvippygudqzvu" group-title="Noticias",https://m.youtube.com/watch?v=Uo-ziJhrTvI&pp=ygUDQzVu
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvavly0uwzzoe" group-title="Noticias",https://www.youtube.com/watch?v=avly0uwZzOE
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvcb12kmmmdjappuaqw" group-title="Noticias",https://www.youtube.com/watch?v=cb12KmMMDJA&pp=uAQw
+#EXTINF:-1 tvg-id="httpsmyoutubecomwatchv5fls4vyq" group-title="Noticias",https://m.youtube.com/watch?v=5f__Ls4_VYQ
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv8mw0ydkn2xy" group-title="Musica",https://www.youtube.com/watch?v=8Mw0YdKN2XY
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvbv6mcedskco" group-title="Infantil",https://www.youtube.com/watch?v=BV6mcEdskCo
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchv12xrdxb13cc" group-title="Noticias",https://www.youtube.com/watch?v=12xrDxb13cc
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvolmitr2oueu" group-title="Noticias",https://www.youtube.com/watch?v=OLMiTr2OUeU
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="httpsmyoutubecomwatchvcb12kmmmdjappuaqw" group-title="Noticias",https://m.youtube.com/watch?v=cb12KmMMDJA&pp=uAQw
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="httpswwwyoutubecomwatchvarkbax1k2u" group-title="Noticias",https://www.youtube.com/watch?v=ArKbAx1K-2U
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
