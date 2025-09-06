@@ -3,22 +3,22 @@
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="g3vbksbx87i" group-title="Noticias",DW Español (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="5f__ls4_vyq" group-title="Noticias",LN + (OFF AIR)
+#EXTINF:-1 tvg-id="olmitr2oueu" group-title="Noticias",Canal 26 (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="uo-zijhrtvi" group-title="Noticias",C5N (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="cb12kmmmdja" group-title="Noticias",TN (OFF AIR)
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="8mw0ydkn2xy" group-title="Musica",Quiero Musica
-https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/1757144712/ei/KJK7aO-VMcm1kucPr4uuuAY/ip/20.109.38.113/id/8Mw0YdKN2XY.3/itag/96/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D137/rqh/1/hls_chunk_host/rr5---sn-p5qs7nzr.googlevideo.com/xpc/EgVo2aDSNQ%3D%3D/playlist_duration/30/manifest_duration/30/siu/1/bui/AY1jyLPGAd7buV-MKbt0y1kuD7mgW3yr0PchP-wRGvyyxu-zeO2Hb6wlPhmq-GUE-TTG-KFJxA/spc/l3OVKZLZBV0H06BPGc7yzX4foBNWBDLsjQ28m2nqdiZARMGGF3PobwPEAkYH8zk-0WTTNnXL2cdH4_G3iPM/vprv/1/playlist_type/DVR/met/1757123114,/mh/ER/mm/44/mn/sn-p5qs7nzr/ms/lva/mv/u/mvi/5/pl/19/rms/lva,lva/dover/11/pacing/0/keepalive/yes/fexp/51355912,51552689,51565115,51565681,51580968/mt/1757119771/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,rqh,xpc,playlist_duration,manifest_duration,siu,bui,spc,vprv,playlist_type/sig/AJfQdSswRgIhANIY8B1yyLNe0Hr3ldOV-LMTQ3pS_TE4iCbdvvHaOTFaAiEAofd49-H5q2AIt3zTM45iqhL6KdR-AWZ4vgje_en5P-w%3D/lsparams/hls_chunk_host,met,mh,mm,mn,ms,mv,mvi,pl,rms/lsig/APaTxxMwRQIhAOK3R1MAq5rQ_b1DukQ5EKa-qDXFNMfw978S0ng-RQojAiBRM1jEBMd9WOzN62iszorZA8JtjiRPHrZ6HMzbvIspbw%3D%3D/playlist/index.m3u8
-#EXTINF:-1 tvg-id="arkbax1k-2u" group-title="Noticias",A24 (OFF AIR)
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="12xrdxb13cc" group-title="Noticias",IP Noticias (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="olmitr2oueu" group-title="Noticias",Canal 26 (OFF AIR)
+#EXTINF:-1 tvg-id="avly0uwzzoe" group-title="Noticias",Cronica TV (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="avly0uwzzoe" group-title="Noticias",Cronica TV
-https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/1757144713/ei/KJK7aLjgPJWDkucP-rDJ2Qg/ip/20.109.38.113/id/avly0uwZzOE.2/itag/96/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D137/rqh/1/hls_chunk_host/rr4---sn-p5qddn7z.googlevideo.com/xpc/EgVo2aDSNQ%3D%3D/playlist_duration/30/manifest_duration/30/ss/1/ssa/1/siu/1/bui/AY1jyLNIlxjsvFJAKLf7AdrtBzCJPMlqGFNWQslhzVTNsDeudd1yVQd5T_VSIFiUjCpRf11Yhw/spc/l3OVKeVnUWytPDqC2x1INGaVDwmonh9RCbHUy4MtGXetrn7ig7WGSLQEXXiiQkchSvdgaNAMHmCEovhtby0/vprv/1/playlist_type/DVR/met/1757123114,/mh/9V/mm/44/mn/sn-p5qddn7z/ms/lva/mv/u/mvi/4/pl/19/rms/lva,lva/dover/11/pacing/0/keepalive/yes/fexp/51355912,51552689,51565115,51565681,51580968/mt/1757119771/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,rqh,xpc,playlist_duration,manifest_duration,ss,ssa,siu,bui,spc,vprv,playlist_type/sig/AJfQdSswRQIhAI1cIvK8_KBR8Zrd9-lC6IDJVjhHg6R1moWCmM2-L-qFAiA-JXaQ2uCk96WoUNTHP-WHSLJXBNFoc_OJJHhxOEYmOg%3D%3D/lsparams/hls_chunk_host,met,mh,mm,mn,ms,mv,mvi,pl,rms/lsig/APaTxxMwRQIgSuQLhVVfYE5ir01zXB0I0maR-BE0pNM5Jk-Zijz87coCIQDjg8jNpsqhP1X7IzcJKCkITtXQHR_Hbr1W2wSynEUTMQ%3D%3D/playlist/index.m3u8
+#EXTINF:-1 tvg-id="8mw0ydkn2xy" group-title="Musica",Quiero Musica (OFF AIR)
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="5f__ls4_vyq" group-title="Noticias",LN + (OFF AIR)
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="arkbax1k-2u" group-title="Noticias",A24 (OFF AIR)
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="cb12kmmmdja" group-title="Noticias",TN (OFF AIR)
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="yasserhaedo" group-title="Gaming",Yasser Haedo (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="bv6mcedskco" group-title="Infantil",Pokemon Kids TV (OFF AIR)
