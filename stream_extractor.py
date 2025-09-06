@@ -6,93 +6,86 @@ import re
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ==================== CONFIGURACIÓN ====================
+# ==================== CONFIG ====================
 INPUT_FILE = "links.txt"
 OUTPUT_FILE = "streams.m3u"
 
-# Fallback fijo si el stream falla
-FALLBACK_STREAM = "https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8"
-
-# EPG URLs
-EPG_URLS = [
-    "https://iptv-org.github.io/epg/guides/es.xml",
-    "https://iptv-org.github.io/epg/guides/us.xml"
+PIPED_APIS = [
+    "https://pipedapi.kavin.rocks",
+    "https://pipedapi.syncpundit.io",
+    "https://pipedapi.r4fo.com",
+    "https://pipedapi.in.projectsegfau.lt"
 ]
 
-# API para obtener HLS de YouTube
-PIPED_API = "https://piped.video/streams/"
-
-# Número máximo de hilos
+FALLBACK_URL = "https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8"
 MAX_THREADS = 10
-# =======================================================
+# =================================================
+
+def check_yt_dlp():
+    try:
+        subprocess.run(["yt-dlp", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except FileNotFoundError:
+        print("[ERROR] yt-dlp no está instalado.")
+        return False
 
 def normalize_id(text):
     return re.sub(r'[^a-z0-9]', '', text.lower())
 
 def parse_line(line):
-    """Devuelve (url, categoria, canal) desde la línea del archivo."""
-    parts = line.split("|")
-    url = parts[0].strip()
-    category = parts[1].strip() if len(parts) > 1 else "General"
-    channel = parts[2].strip() if len(parts) > 2 else None
-    return url, category, channel
+    parts = [p.strip() for p in line.split("|")]
+    url = parts[0]
+    category = parts[1] if len(parts) > 1 and parts[1] else "General"
+    channel_name = parts[2] if len(parts) > 2 and parts[2] else url
+    return url, category, channel_name
 
-def get_youtube_stream(video_id):
-    """Obtiene el link HLS desde la API Piped."""
-    try:
-        response = requests.get(PIPED_API + video_id, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if "hls" in data and data["hls"]:
-                return data["hls"]
-        return None
-    except Exception:
-        return None
-
-def extract_youtube_id(url):
+def extract_video_id(url):
     match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{6,})", url)
     return match.group(1) if match else None
 
-def run_command(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.stdout.strip() if result.returncode == 0 else None
+def get_youtube_stream(video_id):
+    for api in PIPED_APIS:
+        try:
+            r = requests.get(f"{api}/streams/{video_id}", timeout=8)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("hls"):
+                    return data["hls"]
+                if data.get("dash"):
+                    return data["dash"]
+        except Exception:
+            continue
+    return None
+
+def get_yt_dlp_stream(url):
+    try:
+        cmd = ["yt-dlp", "-f", "b", "-g", "--no-check-certificate", url]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
 
 def get_stream_info(line):
     url, category, channel_name = parse_line(line)
+    tvg_id = normalize_id(channel_name)
+    stream_url = None
 
-    try:
-        if "youtube.com" in url or "youtu.be" in url:
-            video_id = extract_youtube_id(url)
-            if video_id:
-                hls_url = get_youtube_stream(video_id)
-                title = channel_name or f"YouTube-{video_id}"
-                if hls_url:
-                    return f'#EXTINF:-1 tvg-id="{video_id}" group-title="{category}",{title}\n{hls_url}\n'
-                else:
-                    print(f"[WARNING] YouTube API no devolvió HLS para: {url}. Usando fallback.")
-                    return f'#EXTINF:-1 tvg-id="{video_id}" group-title="{category}",{title} (OFF AIR)\n{FALLBACK_STREAM}\n'
-            else:
-                print(f"[ERROR] No se pudo extraer ID de YouTube en: {url}")
-                return None
+    if "youtube.com" in url or "youtu.be" in url:
+        video_id = extract_video_id(url)
+        if video_id:
+            stream_url = get_youtube_stream(video_id)
+        if not stream_url:
+            stream_url = get_yt_dlp_stream(url)
+    else:
+        stream_url = get_yt_dlp_stream(url)
 
-        else:
-            # Para Twitch u otros enlaces (usa yt-dlp)
-            stream_url = run_command([
-                "yt-dlp", "-f", "bv*[height<=1080][vcodec*=avc1]+bestaudio/best",
-                "-g", "--no-check-certificate", url
-            ])
-            title = channel_name or run_command(["yt-dlp", "--get-title", url]) or "Stream"
-            tvg_id = normalize_id(title)
+    if not stream_url:
+        print(f"[WARNING] No se pudo obtener stream de: {url}. Usando fallback.")
+        stream_url = FALLBACK_URL
 
-            if stream_url:
-                return f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title}\n{stream_url}\n'
-            else:
-                print(f"[WARNING] No se pudo obtener M3U8 de: {url}. Usando fallback.")
-                return f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{title} (OFF AIR)\n{FALLBACK_STREAM}\n'
-
-    except Exception:
-        title_display = (channel_name or "Stream") + " (OFF AIR)"
-        return f'#EXTINF:-1 group-title="{category}",{title_display}\n{FALLBACK_STREAM}\n'
+    return f'#EXTINF:-1 tvg-id="{tvg_id}" group-title="{category}",{channel_name}\n{stream_url}\n'
 
 def generate_m3u(input_path, output_path):
     if not os.path.exists(input_path):
@@ -106,11 +99,10 @@ def generate_m3u(input_path, output_path):
         print("[ERROR] El archivo links.txt está vacío.")
         return
 
-    epg_line = ",".join(EPG_URLS)
     success_count = 0
 
     with open(output_path, "w", encoding="utf-8") as out:
-        out.write(f'#EXTM3U url-tvg="{epg_line}"\n')
+        out.write(f'#EXTM3U url-tvg="https://iptv-org.github.io/epg/guides/es.xml"\n')
 
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             future_to_line = {executor.submit(get_stream_info, line): line for line in lines}
@@ -121,12 +113,13 @@ def generate_m3u(input_path, output_path):
                     success_count += 1
 
     print(f"\n✅ Archivo M3U generado: {output_path}")
-    print(f"✔ {success_count} streams agregados (con fallback si falló).")
+    print(f"✔ {success_count} streams procesados (con fallback si falló).")
 
 if __name__ == "__main__":
+    if not check_yt_dlp():
+        sys.exit(1)
+
     if os.path.exists(OUTPUT_FILE):
         print(f"[INFO] El archivo {OUTPUT_FILE} ya existe. Será sobrescrito.")
 
-    print(f"[CONFIG] Fallback: {FALLBACK_STREAM}")
-    print(f"[CONFIG] API YouTube: {PIPED_API}")
     generate_m3u(INPUT_FILE, OUTPUT_FILE)
