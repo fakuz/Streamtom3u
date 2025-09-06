@@ -26,29 +26,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Crear cookies.txt si existe el secreto COOKIES_FILE_B64
-      - name: Crear cookies.txt desde secreto base64 (si existe)
-        env:
-          COOKIES_B64: ${{ secrets.COOKIES_FILE_B64 }}
-        run: |
-          if [ -n "$COOKIES_B64" ]; then
-            echo "$COOKIES_B64" | base64 -d > cookies.txt
-            echo "[INFO] cookies.txt creado con $(wc -l < cookies.txt) líneas"
-          else
-            echo "[WARNING] No se definió COOKIES_FILE_B64. Continuando sin cookies."
-          fi
-
-      # 5. Dar permisos al script
+      # 4. Dar permisos al script
       - name: Dar permisos al script
         run: chmod +x stream_extractor.py
 
-      # 6. Ejecutar script para generar streams.m3u
+      # 5. Ejecutar script para generar streams.m3u
       - name: Ejecutar script de extracción
         run: |
           echo "[INFO] Ejecutando stream_extractor.py..."
           python3 stream_extractor.py
 
-      # 7. Commit y push del archivo streams.m3u actualizado
+      # 6. Commit y push del archivo streams.m3u actualizado
       - name: Commit and push streams.m3u
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
