@@ -10,23 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Descargar el repositorio
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
+      # 2. Instalar Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # 3. Instalar dependencias
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          # Instalamos yt-dlp directamente (requirements.txt opcional)
-          pip install yt-dlp
+          pip install -r requirements.txt
 
-      - name: Crear cookies.txt desde secreto base64
+      # 4. Crear cookies.txt si existe el secreto COOKIES_FILE_B64
+      - name: Crear cookies.txt desde secreto base64 (si existe)
         env:
           COOKIES_B64: ${{ secrets.COOKIES_FILE_B64 }}
         run: |
@@ -37,14 +38,17 @@ jobs:
             echo "[WARNING] No se definió COOKIES_FILE_B64. Continuando sin cookies."
           fi
 
+      # 5. Dar permisos al script
       - name: Dar permisos al script
         run: chmod +x stream_extractor.py
 
+      # 6. Ejecutar script para generar streams.m3u
       - name: Ejecutar script de extracción
         run: |
           echo "[INFO] Ejecutando stream_extractor.py..."
           python3 stream_extractor.py
 
+      # 7. Commit y push del archivo streams.m3u actualizado
       - name: Commit and push streams.m3u
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
