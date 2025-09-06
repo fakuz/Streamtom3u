@@ -1,23 +1,23 @@
-#EXTM3U url-tvg="https://iptv-org.github.io/epg/guides/es.xml,https://iptv-org.github.io/epg/guides/us.xml"
+#EXTM3U url-tvg="https://iptv-epg.org/files/epg-ar.xml,https://iptv-epg.org/files/epg-us.xml,https://iptv-epg.org/files/epg-mx.xml"
 #EXTINF:-1 tvg-id="35eynxh1oyu" group-title="Radio",LT7 AM900 Corrientes (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="12xrdxb13cc" group-title="Noticias",IP Noticias (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="g3vbksbx87i" group-title="Noticias",DW Español (OFF AIR)
+#EXTINF:-1 tvg-id="5f__ls4_vyq" group-title="Noticias",LN + (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="uo-zijhrtvi" group-title="Noticias",C5N (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="5f__ls4_vyq" group-title="Noticias",LN + (OFF AIR)
+#EXTINF:-1 tvg-id="arkbax1k-2u" group-title="Noticias",A24 (OFF AIR)
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="g3vbksbx87i" group-title="Noticias",DW Español (OFF AIR)
+https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
+#EXTINF:-1 tvg-id="cb12kmmmdja" group-title="Noticias",TN (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="olmitr2oueu" group-title="Noticias",Canal 26 (OFF AIR)
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="arkbax1k-2u" group-title="Noticias",A24 (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="8mw0ydkn2xy" group-title="Musica",Quiero Musica (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="avly0uwzzoe" group-title="Noticias",Cronica TV (OFF AIR)
-https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="cb12kmmmdja" group-title="Noticias",TN (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
 #EXTINF:-1 tvg-id="yasserhaedo" group-title="Gaming",Yasser Haedo (OFF AIR)
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
