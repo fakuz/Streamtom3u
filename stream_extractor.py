@@ -57,9 +57,12 @@ def get_youtube_stream(video_id):
             continue
     return None
 
-def get_yt_dlp_stream(url):
+def get_yt_dlp_stream(url, use_cookies=False):
     try:
-        cmd = ["yt-dlp", "-f", "b", "-g", "--no-check-certificate", url]
+        cmd = ["yt-dlp", "-f", "b", "-g", "--no-check-certificate"]
+        if use_cookies and os.path.exists("cookies.txt"):
+            cmd += ["--cookies", "cookies.txt"]
+        cmd.append(url)
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
@@ -72,15 +75,21 @@ def get_stream_info(line):
     tvg_id = normalize_id(channel_name)
     stream_url = None
 
+    # 1. Intentar Piped (solo para YouTube)
     if "youtube.com" in url or "youtu.be" in url:
         video_id = extract_video_id(url)
         if video_id:
             stream_url = get_youtube_stream(video_id)
-        if not stream_url:
-            stream_url = get_yt_dlp_stream(url)
-    else:
-        stream_url = get_yt_dlp_stream(url)
 
+    # 2. Intentar yt-dlp sin cookies
+    if not stream_url:
+        stream_url = get_yt_dlp_stream(url, use_cookies=False)
+
+    # 3. Intentar yt-dlp con cookies
+    if not stream_url and os.path.exists("cookies.txt"):
+        stream_url = get_yt_dlp_stream(url, use_cookies=True)
+
+    # 4. Si todo falla, fallback
     if not stream_url:
         print(f"[WARNING] No se pudo obtener stream de: {url}. Usando fallback.")
         stream_url = FALLBACK_URL
