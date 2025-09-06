@@ -1,25 +1,25 @@
-#EXTM3U url-tvg="https://iptv-org.github.io/epg/guides/es.xml,https://iptv-org.github.io/epg/guides/us.xml"
-#EXTINF:-1 tvg-id="12xrDxb13cc" group-title="Noticias",IP Noticias (OFF AIR)
+#EXTM3U url-tvg="https://iptv-org.github.io/epg/guides/es.xml"
+#EXTINF:-1 tvg-id="lt7am900corrientes" group-title="Radio",LT7 AM900 Corrientes
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="g3vbKsbx87I" group-title="Noticias",DW Español (OFF AIR)
+#EXTINF:-1 tvg-id="a24" group-title="Noticias",A24
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="ArKbAx1K-2U" group-title="Noticias",A24 (OFF AIR)
+#EXTINF:-1 tvg-id="ln" group-title="Noticias",LN +
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="35eynXh1OYU" group-title="Radio",LT7 AM900 Corrientes (OFF AIR)
+#EXTINF:-1 tvg-id="canal26" group-title="Noticias",Canal 26
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="OLMiTr2OUeU" group-title="Noticias",Canal 26 (OFF AIR)
+#EXTINF:-1 tvg-id="cronicatv" group-title="Noticias",Cronica TV
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="cb12KmMMDJA" group-title="Noticias",TN (OFF AIR)
+#EXTINF:-1 tvg-id="c5n" group-title="Noticias",C5N
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="avly0uwZzOE" group-title="Noticias",Cronica TV (OFF AIR)
+#EXTINF:-1 tvg-id="tn" group-title="Noticias",TN
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="8Mw0YdKN2XY" group-title="Musica",Quiero Musica (OFF AIR)
+#EXTINF:-1 tvg-id="ipnoticias" group-title="Noticias",IP Noticias
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="Uo-ziJhrTvI" group-title="Noticias",C5N (OFF AIR)
+#EXTINF:-1 tvg-id="dwespaol" group-title="Noticias",DW Español
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="5f__Ls4_VYQ" group-title="Noticias",LN + (OFF AIR)
+#EXTINF:-1 tvg-id="quieromusica" group-title="Musica",Quiero Musica
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="BV6mcEdskCo" group-title="Infantil",Pokemon Kids TV (OFF AIR)
+#EXTINF:-1 tvg-id="yasserhaedo" group-title="Gaming",Yasser Haedo
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
-#EXTINF:-1 tvg-id="yasserhaedo" group-title="Gaming",Yasser Haedo (OFF AIR)
+#EXTINF:-1 tvg-id="pokemonkidstv" group-title="Infantil",Pokemon Kids TV
 https://raw.githubusercontent.com/fakuz/Streamtom3u/refs/heads/main/fallback/fallback.m3u8
