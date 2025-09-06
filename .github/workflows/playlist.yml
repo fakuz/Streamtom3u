@@ -2,9 +2,7 @@ name: Generar playlist M3U con Proxies y Fallback
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */3 * * *'  # Cada 3 horas
-
+    
 jobs:
   build:
     runs-on: ubuntu-latest
